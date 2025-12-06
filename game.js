@@ -567,6 +567,9 @@ function openShop() {
     document.getElementById('shopScreen').classList.remove('hidden');
     document.getElementById('shopScore').textContent = gameState.score;
     
+    // 게임 컨트롤 버튼들 숨기기
+    document.querySelector('.mobile-controls').classList.add('hidden-controls');
+    
     // 구매 상태 업데이트
     const buyBtn = document.getElementById('buySwordBtn');
     const status = document.getElementById('purchaseStatus');
@@ -588,6 +591,9 @@ function openShop() {
 function closeShop() {
     gameState.isPaused = false;
     document.getElementById('shopScreen').classList.add('hidden');
+    
+    // 게임 컨트롤 버튼들 다시 보이기
+    document.querySelector('.mobile-controls').classList.remove('hidden-controls');
 }
 
 // 짱센검 구매

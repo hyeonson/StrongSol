@@ -213,6 +213,11 @@ h3 {
     color: #667eea;
 }
 
+/* 버튼 숨김 클래스 */
+.mobile-controls.hidden-controls {
+    display: none !important;
+}
+
 #gameCanvas {
     display: block;
     background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 100%);
