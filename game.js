@@ -153,16 +153,18 @@ const player = {
             
             // 플레이어가 건물과 겹치는지 확인
             if (checkCollision(this, building)) {
-                // 플레이어가 건물 위에 있는 경우
+                // 플레이어가 건물 위에 있는 경우 (아래로 떨어지는 중)
                 if (this.velocityY > 0 && this.y < building.y + building.height - 10) {
                     this.y = building.y - this.height;
                     this.velocityY = 0;
                     this.isJumping = false;
                 }
-                // 플레이어의 머리가 건물 아래에서 부딪힌 경우
-                else if (this.velocityY < 0) {
+                // 플레이어가 건물 아래에서 점프하는 경우 (위로 올라가는 중)
+                else if (this.velocityY < 0 && this.y > building.y) {
                     // 건물을 2층 위로 밀기
                     building.push(FLOOR_HEIGHT * 2);
+                    // 플레이어를 건물 하단에 막기 (통과하지 못하도록)
+                    this.y = building.y + building.height;
                     this.velocityY = 0;
                 }
             }
@@ -238,6 +240,7 @@ class Building {
         // startY가 제공되면 그 위치에서 시작, 아니면 화면 위에서 시작
         this.y = startY !== null ? startY : -this.height;
         this.velocityY = BUILDING_FALL_SPEED;
+        this.pushVelocity = 0; // 밀리는 속도
         this.hpPerFloor = hpPerFloor;
         this.destroyed = false;
         
@@ -256,7 +259,8 @@ class Building {
     }
     
     push(amount) {
-        this.y -= amount;
+        // 즉시 이동하는 대신 밀리는 속도를 추가
+        this.pushVelocity -= amount / 10; // 부드럽게 밀리도록 속도로 변환
     }
     
     takeDamage(damage = 1) {
@@ -297,6 +301,16 @@ class Building {
     update() {
         if (this.destroyed) return;
         
+        // 밀리는 속도 적용 (부드러운 애니메이션)
+        if (Math.abs(this.pushVelocity) > 0.1) {
+            this.y += this.pushVelocity;
+            // 감쇠 효과 (0.9를 곱해서 점점 느려지게)
+            this.pushVelocity *= 0.9;
+        } else {
+            this.pushVelocity = 0;
+        }
+        
+        // 기본 낙하 속도 적용
         this.y += this.velocityY;
         
         // 플레이어와 충돌 체크 (건물이 지면에 닿았을 때)

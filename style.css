@@ -173,6 +173,14 @@ h3 {
     position: relative;
 }
 
+#gameScreen.hidden {
+    display: none;
+}
+
+#gameScreen.hidden .mobile-controls {
+    display: none !important;
+}
+
 .hud {
     position: absolute;
     top: 20px;
@@ -363,24 +371,38 @@ h3 {
     }
 
     .mobile-controls {
-        bottom: 10px;
-        padding: 0 15px;
+        bottom: 10px !important;
+        padding: 0 15px !important;
+        display: flex !important;
+        z-index: 1000 !important;
+    }
+
+    .control-btn {
+        display: flex !important;
+        visibility: visible !important;
     }
 
     .control-btn.left {
-        height: 100px;
-        padding: 30px 40px;
-        font-size: 2em;
+        height: 80px !important;
+        padding: 20px 30px !important;
+        font-size: 1.8em !important;
+        width: auto !important;
     }
 
     .control-btn.right {
-        height: 100px;
-        padding: 30px 40px;
-        font-size: 2em;
+        height: 80px !important;
+        padding: 20px 30px !important;
+        font-size: 1.8em !important;
+        width: auto !important;
     }
 
     .control-btn.shop {
-        padding: 15px 25px;
-        font-size: 1.1em;
+        padding: 12px 20px !important;
+        font-size: 1em !important;
+        height: auto !important;
+    }
+
+    .right-controls {
+        gap: 10px !important;
     }
 }
