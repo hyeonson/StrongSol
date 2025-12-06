@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>건물 부수기 게임</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 게임 시작 화면 -->
+    <div id="startScreen" class="screen">
+        <div class="modal">
+            <h1>🏢 건물 부수기 게임 🗡️</h1>
+            <div class="instructions">
+                <h2>게임 설명</h2>
+                <div class="instruction-item">
+                    <strong>점프:</strong> 키보드 방향키 위 ↑ 또는 화면 왼쪽의 점프 버튼
+                </div>
+                <div class="instruction-item">
+                    <strong>베기:</strong> 스페이스바 또는 화면 오른쪽의 베기 버튼
+                </div>
+                <div class="instruction-item">
+                    <strong>게임 목표:</strong> 건물에 깔리지 않고, 최대한 많은 수의 건물을 부셔라!
+                </div>
+                <div class="game-tips">
+                    <p>💡 점프하면 건물을 1층 정도 위로 밀 수 있어요</p>
+                    <p>⚔️ 베기로 건물에 데미지를 주세요 (1층당 체력 3)</p>
+                    <p>🏗️ 건물은 10층으로 구성되어 있어요</p>
+                    <p>📈 건물을 완파하면 다음 건물의 난이도가 올라가요!</p>
+                </div>
+            </div>
+            <button id="startBtn" class="btn-primary">게임 시작</button>
+        </div>
+    </div>
+
+    <!-- 게임 오버 화면 -->
+    <div id="gameOverScreen" class="screen hidden">
+        <div class="modal">
+            <h1>💥 게임 오버! 💥</h1>
+            <div class="score-display">
+                <h2>최종 점수</h2>
+                <div class="final-score" id="finalScore">0</div>
+            </div>
+            <div class="highscores">
+                <h3>🏆 최고 점수 순위</h3>
+                <ol id="highscoreList"></ol>
+            </div>
+            <button id="restartBtn" class="btn-primary">다시 하기</button>
+        </div>
+    </div>
+
+    <!-- 게임 플레이 화면 -->
+    <div id="gameScreen" class="hidden">
+        <!-- 점수 표시 -->
+        <div class="hud">
+            <div class="score-info">
+                <div class="score-label">점수</div>
+                <div id="score" class="score-value">0</div>
+            </div>
+            <div class="building-info">
+                <div class="building-label">현재 건물</div>
+                <div id="buildingNumber" class="building-value">1</div>
+            </div>
+        </div>
+
+        <!-- 게임 캔버스 -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- 모바일 컨트롤 버튼 -->
+        <div class="mobile-controls">
+            <button id="jumpBtn" class="control-btn left">점프 ↑</button>
+            <div class="right-controls">
+                <button id="shopBtn" class="control-btn shop">상점 🛒</button>
+                <button id="slashBtn" class="control-btn right">베기 ⚔️</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 상점 화면 -->
+    <div id="shopScreen" class="screen hidden">
+        <div class="modal">
+            <h1>🛒 상점</h1>
+            <div class="shop-content">
+                <div class="shop-item">
+                    <h2>⚔️ 짱센검</h2>
+                    <p class="item-description">공격력 10배! 건물을 한 방에!</p>
+                    <p class="item-price">가격: 100점</p>
+                    <p class="current-score">보유 점수: <span id="shopScore">0</span>점</p>
+                    <button id="buySwordBtn" class="btn-primary">구매하기</button>
+                    <p id="purchaseStatus" class="purchase-status hidden"></p>
+                </div>
+            </div>
+            <button id="closeShopBtn" class="btn-primary">상점 나가기</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>

@@ -1,0 +1,386 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow: hidden;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    width: 100vw;
+    height: 100vh;
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+}
+
+.screen.hidden {
+    display: none;
+}
+
+.modal {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 40px;
+    border-radius: 20px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    text-align: center;
+}
+
+h1 {
+    color: #667eea;
+    font-size: 2.5em;
+    margin-bottom: 20px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+h2 {
+    color: #764ba2;
+    font-size: 1.8em;
+    margin-bottom: 15px;
+}
+
+h3 {
+    color: #667eea;
+    font-size: 1.5em;
+    margin-bottom: 10px;
+}
+
+.instructions {
+    text-align: left;
+    margin: 20px 0;
+}
+
+.instruction-item {
+    background: #f0f0f0;
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 10px;
+    border-left: 4px solid #667eea;
+}
+
+.instruction-item strong {
+    color: #667eea;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.game-tips {
+    background: #fff3cd;
+    padding: 15px;
+    margin-top: 20px;
+    border-radius: 10px;
+    border: 2px solid #ffc107;
+}
+
+.game-tips p {
+    margin: 8px 0;
+    font-size: 0.95em;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    font-size: 1.3em;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: bold;
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    margin-top: 20px;
+}
+
+.btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+}
+
+.btn-primary:active {
+    transform: translateY(-1px);
+}
+
+.score-display {
+    margin: 30px 0;
+}
+
+.final-score {
+    font-size: 4em;
+    font-weight: bold;
+    color: #667eea;
+    margin: 20px 0;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.highscores {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 15px;
+    margin: 20px 0;
+}
+
+#highscoreList {
+    list-style-position: inside;
+    padding: 0;
+    text-align: left;
+}
+
+#highscoreList li {
+    padding: 10px;
+    margin: 5px 0;
+    background: white;
+    border-radius: 8px;
+    font-size: 1.2em;
+    border-left: 4px solid #667eea;
+}
+
+#highscoreList li:nth-child(1) {
+    border-left-color: #FFD700;
+    font-weight: bold;
+}
+
+#highscoreList li:nth-child(2) {
+    border-left-color: #C0C0C0;
+}
+
+#highscoreList li:nth-child(3) {
+    border-left-color: #CD7F32;
+}
+
+/* 게임 화면 */
+#gameScreen {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.hud {
+    position: absolute;
+    top: 20px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-around;
+    max-width: 800px;
+    margin: 0 auto;
+    z-index: 100;
+    padding: 0 20px;
+}
+
+.score-info, .building-info {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 15px 30px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.score-label, .building-label {
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.score-value, .building-value {
+    font-size: 2em;
+    font-weight: bold;
+    color: #667eea;
+}
+
+#gameCanvas {
+    display: block;
+    background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 100%);
+    touch-action: none;
+}
+
+.mobile-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 0 30px;
+    z-index: 100;
+}
+
+.right-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: flex-end;
+}
+
+.control-btn {
+    background: rgba(102, 126, 234, 0.9);
+    color: white;
+    border: none;
+    padding: 20px 30px;
+    font-size: 1.3em;
+    border-radius: 15px;
+    cursor: pointer;
+    font-weight: bold;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.control-btn:active {
+    transform: scale(0.95);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+}
+
+.control-btn.left {
+    background: rgba(76, 175, 80, 0.9);
+    height: 140px;
+    padding: 40px 60px;
+    font-size: 2.6em;
+    border-radius: 30px;
+}
+
+.control-btn.right {
+    background: rgba(244, 67, 54, 0.9);
+    height: 140px;
+    padding: 40px 60px;
+    font-size: 2.6em;
+    border-radius: 30px;
+}
+
+.control-btn.shop {
+    background: rgba(255, 193, 7, 0.9);
+}
+
+/* 상점 스타일 */
+.shop-content {
+    margin: 30px 0;
+}
+
+.shop-item {
+    background: #f8f9fa;
+    padding: 30px;
+    border-radius: 15px;
+    margin: 20px 0;
+    border: 3px solid #667eea;
+}
+
+.shop-item h2 {
+    margin-bottom: 15px;
+}
+
+.item-description {
+    font-size: 1.2em;
+    color: #555;
+    margin: 10px 0;
+}
+
+.item-price {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #ff5722;
+    margin: 15px 0;
+}
+
+.current-score {
+    font-size: 1.3em;
+    color: #667eea;
+    margin: 10px 0;
+    font-weight: bold;
+}
+
+.purchase-status {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.purchase-status.success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.purchase-status.error {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.purchase-status.hidden {
+    display: none;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    h1 {
+        font-size: 1.8em;
+    }
+
+    .modal {
+        padding: 20px 15px;
+        max-height: 85vh;
+    }
+
+    .final-score {
+        font-size: 2.5em;
+    }
+
+    .hud {
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+        top: 10px;
+        padding: 0 10px;
+    }
+
+    .score-info, .building-info {
+        padding: 10px 20px;
+    }
+
+    .score-value, .building-value {
+        font-size: 1.5em;
+    }
+
+    .mobile-controls {
+        bottom: 10px;
+        padding: 0 15px;
+    }
+
+    .control-btn.left {
+        height: 100px;
+        padding: 30px 40px;
+        font-size: 2em;
+    }
+
+    .control-btn.right {
+        height: 100px;
+        padding: 30px 40px;
+        font-size: 2em;
+    }
+
+    .control-btn.shop {
+        padding: 15px 25px;
+        font-size: 1.1em;
+    }
+}
