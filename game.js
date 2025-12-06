@@ -180,10 +180,10 @@ const player = {
         if (gameState.currentBuilding && !gameState.currentBuilding.destroyed) {
             const building = gameState.currentBuilding;
             
-            // 지면에 있을 때 게임 오버 체크 (캐릭터 높이 0.5배 위에 건물이 있으면)
+            // 지면에 있을 때 게임 오버 체크 (캐릭터 높이 0.2배 위에 건물이 있으면)
             if (isOnGround) {
                 const buildingBottom = building.y + building.height;
-                const dangerZoneTop = this.y - this.height * 0.5;
+                const dangerZoneTop = this.y - this.height * 0.2;
                 
                 // X축으로 건물과 플레이어가 겹치는지 확인
                 const xOverlap = this.x < building.x + building.width &&
