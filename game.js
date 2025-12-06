@@ -31,6 +31,48 @@ const FLOOR_HEIGHT = 40;
 const FLOOR_HP = 3;
 const BUILDING_FLOORS = 10;
 
+// 효과음 시스템
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+function playSlashSound() {
+    try {
+        // 칼 소리 생성 (짧은 노이즈와 금속성 소리)
+        const now = audioContext.currentTime;
+        
+        // 화이트 노이즈 생성
+        const bufferSize = audioContext.sampleRate * 0.1; // 0.1초
+        const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+        const output = buffer.getChannelData(0);
+        
+        for (let i = 0; i < bufferSize; i++) {
+            output[i] = Math.random() * 2 - 1;
+        }
+        
+        const noise = audioContext.createBufferSource();
+        noise.buffer = buffer;
+        
+        // 필터로 칼 소리 특성 만들기
+        const filter = audioContext.createBiquadFilter();
+        filter.type = 'highpass';
+        filter.frequency.value = 2000;
+        
+        const gainNode = audioContext.createGain();
+        gainNode.gain.setValueAtTime(0.3, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+        
+        // 연결
+        noise.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        // 재생
+        noise.start(now);
+        noise.stop(now + 0.1);
+    } catch (error) {
+        console.log('효과음 재생 실패:', error);
+    }
+}
+
 // 충돌 감지 헬퍼 함수
 function checkCollision(player, building) {
     if (!building || building.destroyed) return false;
@@ -89,6 +131,9 @@ const player = {
     
     slash() {
         if (gameState.isPlaying) {
+            // 칼 소리 효과음 재생
+            playSlashSound();
+            
             // 베기 애니메이션은 항상 실행
             this.isSlashing = true;
             this.slashAnimationTimer = 15;
