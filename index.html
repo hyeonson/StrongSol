@@ -4,30 +4,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>건물 부수기 게임</title>
+    <title>업무 부시기 게임</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <!-- 게임 시작 화면 -->
     <div id="startScreen" class="screen">
         <div class="modal">
-            <h1>🏢 건물 부수기 게임 🗡️</h1>
+            <h1>📚 업무 부시기 게임 🗡️</h1>
             <div class="instructions">
                 <h2>게임 설명</h2>
                 <div class="instruction-item">
                     <strong>점프:</strong> 키보드 방향키 위 ↑ 또는 화면 왼쪽의 점프 버튼
                 </div>
                 <div class="instruction-item">
-                    <strong>베기:</strong> 스페이스바 또는 화면 오른쪽의 베기 버튼
+                    <strong>베기:</strong> 키보드 Q 또는 화면 오른쪽의 베기 버튼
                 </div>
                 <div class="instruction-item">
-                    <strong>게임 목표:</strong> 건물에 깔리지 않고, 최대한 많은 수의 건물을 부셔라!
+                    <strong>일격 필살기:</strong> 키보드 R 또는 화면 왼쪽의 일격 버튼
+                    <br><small>※ 베기 20회 성공 시 게이지가 가득 차서 사용 가능!</small>
+                </div>
+                <div class="instruction-item">
+                    <strong>상점:</strong> 키보드 B 또는 화면 오른쪽의 상점 버튼
+                </div>
+                <div class="instruction-item">
+                    <strong>게임 목표:</strong> 업무에 깔리지 않고, 최대한 많은 업무를 부셔라!
                 </div>
                 <div class="game-tips">
-                    <p>💡 점프하면 건물을 1층 정도 위로 밀 수 있어요</p>
-                    <p>⚔️ 베기로 건물에 데미지를 주세요 (1층당 체력 3)</p>
-                    <p>🏗️ 건물은 10층으로 구성되어 있어요</p>
-                    <p>📈 건물을 완파하면 다음 건물의 난이도가 올라가요!</p>
+                    <p>💡 점프하면 업무를 2층 높이 위로 밀 수 있어요</p>
+                    <p>⚔️ 베기로 업무에 데미지를 주세요 (베기 성공 시 게이지 충전!)</p>
+                    <p>💥 일격 필살기로 화면 위까지 날아가며 업무 파괴!</p>
+                    <p>🏗️ 업무는 10층으로 구성되어 있어요</p>
+                    <p>🛒 상점에서 강력한 검을 구매할 수 있어요!</p>
+                    <p>📈 업무를 완파하면 다음 업무의 난이도가 올라가요!</p>
                 </div>
             </div>
             <button id="startBtn" class="btn-primary">게임 시작</button>
