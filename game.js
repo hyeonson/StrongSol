@@ -618,24 +618,55 @@ class Building {
                 color = this.colorTheme.colors[2]; // 밝은 색
             }
             
+            // 책/서류 배경
             ctx.fillStyle = color;
             ctx.fillRect(this.x, floorY, this.width, this.floorHeight - 2);
             
-            // 층 테두리 (색상 테마의 어두운 버전)
+            // 책등 그림자 효과 (왼쪽)
+            const gradient = ctx.createLinearGradient(this.x, floorY, this.x + 30, floorY);
+            gradient.addColorStop(0, 'rgba(0, 0, 0, 0.3)');
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(this.x, floorY, 30, this.floorHeight - 2);
+            
+            // 페이지 라인 (책 페이지 느낌)
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.lineWidth = 1;
+            for (let line = 0; line < 3; line++) {
+                const lineY = floorY + 10 + line * 8;
+                ctx.beginPath();
+                ctx.moveTo(this.x + 15, lineY);
+                ctx.lineTo(this.x + this.width - 15, lineY);
+                ctx.stroke();
+            }
+            
+            // 책 테두리 (두꺼운 외곽선)
             ctx.strokeStyle = this.colorTheme.colors[0];
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 3;
             ctx.strokeRect(this.x, floorY, this.width, this.floorHeight - 2);
             
-            // 건물 타입 텍스트 표시
-            ctx.fillStyle = '#FFF';
-            ctx.font = 'bold 24px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(this.buildingType, this.x + this.width / 2, floorY + this.floorHeight / 2 + 8);
+            // 책 모서리 장식 (금색 모서리)
+            ctx.fillStyle = 'rgba(255, 215, 0, 0.5)';
+            ctx.fillRect(this.x, floorY, 5, 5);
+            ctx.fillRect(this.x + this.width - 5, floorY, 5, 5);
+            ctx.fillRect(this.x, floorY + this.floorHeight - 7, 5, 5);
+            ctx.fillRect(this.x + this.width - 5, floorY + this.floorHeight - 7, 5, 5);
             
-            // 체력 표시
-            ctx.fillStyle = '#000';
-            ctx.font = 'bold 14px Arial';
-            ctx.fillText(`${floor.hp}/${floor.maxHp}`, this.x + this.width / 2, floorY + this.floorHeight - 8);
+            // 건물 타입 텍스트 (책 제목처럼)
+            ctx.fillStyle = '#FFF';
+            ctx.font = 'bold 22px serif';
+            ctx.textAlign = 'center';
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+            ctx.shadowBlur = 3;
+            ctx.fillText(this.buildingType, this.x + this.width / 2, floorY + this.floorHeight / 2 + 2);
+            ctx.shadowBlur = 0;
+            
+            // 체력 표시 (작은 태그처럼)
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(this.x + this.width - 50, floorY + 5, 45, 18);
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 12px Arial';
+            ctx.fillText(`${floor.hp}/${floor.maxHp}`, this.x + this.width - 27, floorY + 17);
         }
     }
 }
