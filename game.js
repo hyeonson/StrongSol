@@ -281,6 +281,13 @@ const player = {
             this.isJumping = false;
         }
         
+        // 화면 상단 제한 (건물이 없을 때 화면 밖으로 나가지 못하도록)
+        const screenTop = -gameState.cameraY;
+        if (this.y <= screenTop) {
+            this.y = screenTop;
+            this.velocityY = Math.max(0, this.velocityY); // 다시 내려오도록
+        }
+        
         // 플레이어가 지면에 완전히 붙어있는지 확인
         const isOnGround = this.y >= groundY - 5;
         
