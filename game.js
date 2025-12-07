@@ -10,7 +10,8 @@ const gameState = {
     hasSuperSword: false, // 짱센검 구매 여부
     hasLegendarySword: false, // 전설의 검 구매 여부
     specialGauge: 0, // 필살기 게이지 (0-20)
-    isUsingSpecial: false // 필살기 사용 중
+    isUsingSpecial: false, // 필살기 사용 중
+    particles: [] // 파티클 효과
 };
 
 // 캔버스 설정
@@ -84,6 +85,49 @@ function checkCollision(player, building) {
            player.x + player.width > building.x &&
            player.y < building.y + building.height &&
            player.y + player.height > building.y;
+}
+
+// 파티클 클래스 (건물 파괴 효과)
+class Particle {
+    constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.size = Math.random() * 8 + 4;
+        this.velocityX = (Math.random() - 0.5) * 10;
+        this.velocityY = (Math.random() - 0.5) * 10 - 5;
+        this.color = color;
+        this.life = 100; // 생명력
+        this.alpha = 1;
+    }
+    
+    update() {
+        this.velocityY += 0.3; // 중력
+        this.x += this.velocityX;
+        this.y += this.velocityY;
+        this.life--;
+        this.alpha = this.life / 100;
+    }
+    
+    draw() {
+        ctx.save();
+        ctx.globalAlpha = this.alpha;
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x + gameState.cameraY, this.y + gameState.cameraY, this.size, this.size);
+        ctx.restore();
+    }
+    
+    isDead() {
+        return this.life <= 0;
+    }
+}
+
+// 파티클 생성 함수
+function createParticles(x, y, width, height, color, count = 20) {
+    for (let i = 0; i < count; i++) {
+        const px = x + Math.random() * width;
+        const py = y + Math.random() * height;
+        gameState.particles.push(new Particle(px, py, color));
+    }
 }
 
 // 플레이어
@@ -408,6 +452,17 @@ class Building {
         const buildingTypes = ['업무', '스트레스', '민원', '숙취'];
         this.buildingType = buildingTypes[Math.floor(Math.random() * buildingTypes.length)];
         
+        // 색상 테마 랜덤 선택
+        const colorThemes = [
+            { name: '비트코인', colors: ['#F7931A', '#FFB84D', '#FFD699'] }, // 오렌지
+            { name: '에메랄드', colors: ['#2ECC71', '#58D68D', '#A9DFBF'] }, // 녹색
+            { name: '사파이어', colors: ['#3498DB', '#5DADE2', '#AED6F1'] }, // 파란색
+            { name: '루비', colors: ['#E74C3C', '#EC7063', '#F1948A'] }, // 빨간색
+            { name: '자수정', colors: ['#9B59B6', '#BB8FCE', '#D7BDE2'] }, // 보라색
+            { name: '토파즈', colors: ['#F39C12', '#F8C471', '#FAD7A0'] }, // 황금색
+        ];
+        this.colorTheme = colorThemes[Math.floor(Math.random() * colorThemes.length)];
+        
         // 각 층의 체력 초기화
         this.floors = [];
         for (let i = 0; i < this.totalFloors; i++) {
@@ -433,7 +488,21 @@ class Building {
             
             // 플레이어와 층이 겹치는지 확인
             if (!(floorBottomY < playerY || floorTopY > playerY + playerHeight)) {
-                // 이 층을 파괴
+                // 이 층을 파괴하고 파티클 생성
+                if (this.floors[i].hp > 0) {
+                    const floor = this.floors[i];
+                    const hpRatio = floor.hp / floor.maxHp;
+                    let color;
+                    if (hpRatio > 0.66) {
+                        color = this.colorTheme.colors[0];
+                    } else if (hpRatio > 0.33) {
+                        color = this.colorTheme.colors[1];
+                    } else {
+                        color = this.colorTheme.colors[2];
+                    }
+                    createParticles(this.x, floorTopY, this.width, this.floorHeight, color, 15);
+                }
+                
                 destroyedHp += this.floors[i].hp;
                 this.floors[i].hp = 0;
             }
@@ -462,6 +531,12 @@ class Building {
                 
                 // 해당 층이 파괴되면 층 제거
                 if (this.floors[i].hp <= 0) {
+                    // 파티클 효과 생성 (건물 색상 테마 사용)
+                    const floorY = this.y + (this.totalFloors - 1) * this.floorHeight;
+                    // 파괴된 층의 색상 사용
+                    const color = this.colorTheme.colors[0]; // 진한 색상
+                    createParticles(this.x, floorY, this.width, this.floorHeight, color, 15);
+                    
                     this.floors.pop();
                     this.totalFloors--;
                     this.height = this.totalFloors * this.floorHeight;
@@ -532,22 +607,22 @@ class Building {
             const floorY = this.y + i * this.floorHeight + gameState.cameraY;
             const floor = this.floors[i];
             
-            // 체력에 따라 색상 변경
+            // 체력에 따라 색상 변경 (색상 테마 사용)
             const hpRatio = floor.hp / floor.maxHp;
             let color;
             if (hpRatio > 0.66) {
-                color = '#F7931A'; // 비트코인 오렌지
+                color = this.colorTheme.colors[0]; // 진한 색
             } else if (hpRatio > 0.33) {
-                color = '#FFB84D';
+                color = this.colorTheme.colors[1]; // 중간 색
             } else {
-                color = '#FFD699';
+                color = this.colorTheme.colors[2]; // 밝은 색
             }
             
             ctx.fillStyle = color;
             ctx.fillRect(this.x, floorY, this.width, this.floorHeight - 2);
             
-            // 층 테두리
-            ctx.strokeStyle = '#CC7A00';
+            // 층 테두리 (색상 테마의 어두운 버전)
+            ctx.strokeStyle = this.colorTheme.colors[0];
             ctx.lineWidth = 2;
             ctx.strokeRect(this.x, floorY, this.width, this.floorHeight - 2);
             
@@ -613,13 +688,23 @@ function gameLoop() {
         if (gameState.currentBuilding) {
             gameState.currentBuilding.update();
         }
+        
+        // 파티클 업데이트
+        gameState.particles = gameState.particles.filter(particle => {
+            particle.update();
+            return !particle.isDead();
+        });
     }
     
     // 그리기는 항상 수행
-    player.draw();
     if (gameState.currentBuilding) {
         gameState.currentBuilding.draw();
     }
+    
+    player.draw();
+    
+    // 파티클 그리기
+    gameState.particles.forEach(particle => particle.draw());
     
     requestAnimationFrame(gameLoop);
 }
@@ -662,6 +747,7 @@ function startGame() {
     gameState.hasLegendarySword = false;
     gameState.specialGauge = 0;
     gameState.isUsingSpecial = false;
+    gameState.particles = [];
     
     player.init();
     player.attackPower = 1; // 기본 공격력으로 초기화
