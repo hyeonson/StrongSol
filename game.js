@@ -7,7 +7,10 @@ const gameState = {
     currentBuilding: null,
     slashDirection: 'left', // 'left' 또는 'right'
     cameraY: 0, // 카메라 Y 오프셋
-    hasSuperSword: false // 짱센검 구매 여부
+    hasSuperSword: false, // 짱센검 구매 여부
+    hasLegendarySword: false, // 전설의 검 구매 여부
+    specialGauge: 0, // 필살기 게이지 (0-20)
+    isUsingSpecial: false // 필살기 사용 중
 };
 
 // 캔버스 설정
@@ -98,6 +101,10 @@ const player = {
     image: new Image(),
     imageLeft: new Image(),
     imageRight: new Image(),
+    specialImage: new Image(),
+    previousImage: null,
+    previousImageLeft: null,
+    previousImageRight: null,
     
     init() {
         this.x = canvas.width / 2 - this.width / 2;
@@ -107,6 +114,7 @@ const player = {
         this.image.src = './images/sol.png';
         this.imageLeft.src = './images/sol_left.png';
         this.imageRight.src = './images/sol_right.png';
+        this.specialImage.src = './images/sol_special.png';
         
         // 이미지 로드 실패 시 처리
         this.image.onerror = () => {
@@ -115,7 +123,8 @@ const player = {
     },
     
     jump() {
-        if (!this.isJumping && gameState.isPlaying) {
+        // 떨어지고 있을 때는 점프 불가
+        if (!this.isJumping && this.velocityY <= 0 && gameState.isPlaying) {
             // 점프는 땅이나 건물에 착지했을 때만 가능
             this.velocityY = JUMP_POWER;
             this.isJumping = true;
@@ -155,12 +164,111 @@ const player = {
                     gameState.currentBuilding.takeDamage(this.attackPower);
                     gameState.score += this.attackPower;
                     updateScore();
+                    
+                    // 베기 성공 시 필살기 게이지 증가
+                    if (gameState.specialGauge < 20) {
+                        gameState.specialGauge++;
+                        updateSpecialGauge();
+                    }
                 }
             }
         }
     },
     
+    special() {
+        // 필살기: 화면 위까지 날아가서 건물 파괴
+        if (gameState.specialGauge >= 20 && !gameState.isUsingSpecial && gameState.isPlaying) {
+            gameState.isUsingSpecial = true;
+            gameState.specialGauge = 0;
+            updateSpecialGauge();
+            
+            // 필살기 이미지로 변경
+            this.image.src = './images/sol_special.png';
+            
+            // 화면 위로 발사
+            this.velocityY = -50; // 매우 빠른 속도로 위로
+        }
+    },
+    
     update() {
+        // 필살기 사용 중일 때
+        if (gameState.isUsingSpecial) {
+            // 위로 올라가는 중
+            if (this.velocityY < 0) {
+                this.y += this.velocityY;
+                
+                // 화면 가장 위에 도달하면 멈추고 내려오기 시작
+                const screenTop = -gameState.cameraY;
+                if (this.y <= screenTop) {
+                    this.y = screenTop;
+                    this.velocityY = 5; // 천천히 내려오기 시작
+                    
+                    // 내려올 때 이미지를 원래대로 복구
+                    if (gameState.hasLegendarySword) {
+                        // 전설의 검 이미지로 복구
+                        this.image.src = './images/sol_2.png';
+                        this.imageLeft.src = './images/sol_2_left.png';
+                        this.imageRight.src = './images/sol_2_right.png';
+                    } else if (gameState.hasSuperSword) {
+                        // 짱센검 이미지로 복구
+                        this.image.src = './images/sol_1.png';
+                        this.imageLeft.src = './images/sol_1_left.png';
+                        this.imageRight.src = './images/sol_1_right.png';
+                    } else {
+                        // 일반 이미지로 복구
+                        this.image.src = './images/sol.png';
+                        this.imageLeft.src = './images/sol_left.png';
+                        this.imageRight.src = './images/sol_right.png';
+                    }
+                }
+                
+                // 올라가면서 건물과 충돌하면 해당 범위의 층만 파괴
+                if (gameState.currentBuilding && !gameState.currentBuilding.destroyed) {
+                    if (checkCollision(this, gameState.currentBuilding)) {
+                        const building = gameState.currentBuilding;
+                        
+                        // 플레이어가 지나가는 범위의 층만 파괴하고 점수 획득
+                        const destroyedHp = building.destroyFloorsInRange(this.y, this.height);
+                        gameState.score += destroyedHp;
+                        updateScore();
+                        
+                        // 모든 층이 파괴되었는지 확인
+                        if (building.totalFloors <= 0) {
+                            building.destroyed = true;
+                            gameState.buildingNumber++;
+                            updateBuildingNumber();
+                            
+                            // 1초 후 새 건물 생성
+                            setTimeout(() => {
+                                if (gameState.isPlaying) {
+                                    const nextHpPerFloor = FLOOR_HP + (gameState.buildingNumber - 1) * 2;
+                                    const newBuilding = new Building(nextHpPerFloor);
+                                    newBuilding.y = -gameState.cameraY - newBuilding.height;
+                                    gameState.currentBuilding = newBuilding;
+                                }
+                            }, 1000);
+                        }
+                    }
+                }
+            }
+            // 내려오는 중
+            else {
+                this.y += this.velocityY;
+            }
+            
+            // 바닥에 착지하면 필살기 종료
+            const groundY = canvas.height - 100 - this.height;
+            if (this.y >= groundY) {
+                this.y = groundY;
+                this.velocityY = 0;
+                this.isJumping = false;
+                gameState.isUsingSpecial = false;
+            }
+            
+            return; // 필살기 중에는 일반 업데이트 건너뛰기
+        }
+        
+        // 일반 업데이트
         // 중력 적용
         this.velocityY += GRAVITY;
         this.y += this.velocityY;
@@ -308,6 +416,33 @@ class Building {
         this.pushVelocity -= amount / 10; // 부드럽게 밀리도록 속도로 변환
     }
     
+    destroyFloorsInRange(playerY, playerHeight) {
+        // 플레이어 Y 범위에 해당하는 층들을 파괴
+        let destroyedHp = 0;
+        
+        for (let i = 0; i < this.totalFloors; i++) {
+            const floorTopY = this.y + i * this.floorHeight;
+            const floorBottomY = floorTopY + this.floorHeight;
+            
+            // 플레이어와 층이 겹치는지 확인
+            if (!(floorBottomY < playerY || floorTopY > playerY + playerHeight)) {
+                // 이 층을 파괴
+                destroyedHp += this.floors[i].hp;
+                this.floors[i].hp = 0;
+            }
+        }
+        
+        // HP가 0인 층들을 제거 (아래에서부터)
+        while (this.totalFloors > 0 && this.floors[this.totalFloors - 1].hp <= 0) {
+            this.floors.pop();
+            this.totalFloors--;
+        }
+        
+        this.height = this.totalFloors * this.floorHeight;
+        
+        return destroyedHp;
+    }
+    
     takeDamage(damage = 1) {
         // 가장 아래층부터 데미지
         let remainingDamage = damage;
@@ -330,12 +465,16 @@ class Building {
                         gameState.buildingNumber++;
                         updateBuildingNumber();
                         
-                        // 다음 건물 생성 (화면 위에서 시작)
-                        const nextHpPerFloor = FLOOR_HP + (gameState.buildingNumber - 1) * 2;
-                        const newBuilding = new Building(nextHpPerFloor);
-                        // 화면에 보이는 가장 위에서 시작
-                        newBuilding.y = -gameState.cameraY - newBuilding.height;
-                        gameState.currentBuilding = newBuilding;
+                        // 1초 후 다음 건물 생성
+                        setTimeout(() => {
+                            if (gameState.isPlaying) {
+                                const nextHpPerFloor = FLOOR_HP + (gameState.buildingNumber - 1) * 2;
+                                const newBuilding = new Building(nextHpPerFloor);
+                                // 화면에 보이는 가장 위에서 시작
+                                newBuilding.y = -gameState.cameraY - newBuilding.height;
+                                gameState.currentBuilding = newBuilding;
+                            }
+                        }, 1000);
                         break;
                     }
                 }
@@ -361,17 +500,20 @@ class Building {
         // 플레이어와 충돌 체크 (건물이 지면에 닿았을 때)
         const groundY = canvas.height - 100;
         if (this.y + this.height >= groundY) {
-            // 건물이 땅에 닿았으면 제거하고 새 건물 생성
+            // 건물이 땅에 닿았으면 제거하고 1초 후 새 건물 생성
             this.destroyed = true;
             gameState.buildingNumber++;
             updateBuildingNumber();
             
-            // 다음 건물 생성 (화면 위에서 시작)
-            const nextHpPerFloor = FLOOR_HP + (gameState.buildingNumber - 1) * 2;
-            const newBuilding = new Building(nextHpPerFloor);
-            // 화면에 보이는 가장 위에서 시작
-            newBuilding.y = -gameState.cameraY - newBuilding.height;
-            gameState.currentBuilding = newBuilding;
+            setTimeout(() => {
+                if (gameState.isPlaying) {
+                    const nextHpPerFloor = FLOOR_HP + (gameState.buildingNumber - 1) * 2;
+                    const newBuilding = new Building(nextHpPerFloor);
+                    // 화면에 보이는 가장 위에서 시작
+                    newBuilding.y = -gameState.cameraY - newBuilding.height;
+                    gameState.currentBuilding = newBuilding;
+                }
+            }, 1000);
         }
     }
     
@@ -484,6 +626,23 @@ function updateBuildingNumber() {
     document.getElementById('buildingNumber').textContent = gameState.buildingNumber;
 }
 
+function updateSpecialGauge() {
+    const gauge = document.getElementById('specialGauge');
+    const btn = document.getElementById('specialBtn');
+    const percentage = (gameState.specialGauge / 20) * 100;
+    
+    gauge.style.width = percentage + '%';
+    
+    // 게이지가 가득 차면 버튼 활성화
+    if (gameState.specialGauge >= 20) {
+        btn.disabled = false;
+        btn.style.background = 'rgba(156, 39, 176, 0.9)';
+    } else {
+        btn.disabled = true;
+        btn.style.background = 'rgba(100, 100, 100, 0.5)';
+    }
+}
+
 // 게임 시작
 function startGame() {
     gameState.isPlaying = true;
@@ -493,6 +652,9 @@ function startGame() {
     gameState.slashDirection = 'left';
     gameState.cameraY = 0;
     gameState.hasSuperSword = false;
+    gameState.hasLegendarySword = false;
+    gameState.specialGauge = 0;
+    gameState.isUsingSpecial = false;
     
     player.init();
     player.attackPower = 1; // 기본 공격력으로 초기화
@@ -506,6 +668,7 @@ function startGame() {
     
     updateScore();
     updateBuildingNumber();
+    updateSpecialGauge();
     
     gameLoop();
 }
@@ -566,15 +729,24 @@ function openShop() {
     gameState.isPaused = true;
     document.getElementById('shopScreen').classList.remove('hidden');
     document.getElementById('shopScore').textContent = gameState.score;
+    document.getElementById('shopScore2').textContent = gameState.score;
     
     // 게임 컨트롤 버튼들 숨기기
     document.querySelector('.mobile-controls').classList.add('hidden-controls');
+    // HUD (점수, 현재 건물) 숨기기
+    document.querySelector('.hud').classList.add('hidden-controls');
     
-    // 구매 상태 업데이트
+    // 짱센검 구매 상태 업데이트
     const buyBtn = document.getElementById('buySwordBtn');
     const status = document.getElementById('purchaseStatus');
     
-    if (gameState.hasSuperSword) {
+    if (gameState.hasLegendarySword) {
+        buyBtn.disabled = true;
+        buyBtn.textContent = '전설의 검 보유중';
+        status.textContent = '⚡ 전설의 검을 보유하고 있습니다!';
+        status.className = 'purchase-status success';
+        status.classList.remove('hidden');
+    } else if (gameState.hasSuperSword) {
         buyBtn.disabled = true;
         buyBtn.textContent = '구매 완료';
         status.textContent = '⚔️ 짱센검을 이미 보유하고 있습니다!';
@@ -585,6 +757,22 @@ function openShop() {
         buyBtn.textContent = '구매하기';
         status.classList.add('hidden');
     }
+    
+    // 전설의 검 구매 상태 업데이트
+    const buyLegendaryBtn = document.getElementById('buyLegendarySwordBtn');
+    const statusLegendary = document.getElementById('purchaseStatusLegendary');
+    
+    if (gameState.hasLegendarySword) {
+        buyLegendaryBtn.disabled = true;
+        buyLegendaryBtn.textContent = '구매 완료';
+        statusLegendary.textContent = '⚡ 전설의 검을 이미 보유하고 있습니다!';
+        statusLegendary.className = 'purchase-status success';
+        statusLegendary.classList.remove('hidden');
+    } else {
+        buyLegendaryBtn.disabled = false;
+        buyLegendaryBtn.textContent = '구매하기';
+        statusLegendary.classList.add('hidden');
+    }
 }
 
 // 상점 닫기
@@ -594,6 +782,8 @@ function closeShop() {
     
     // 게임 컨트롤 버튼들 다시 보이기
     document.querySelector('.mobile-controls').classList.remove('hidden-controls');
+    // HUD (점수, 현재 건물) 다시 보이기
+    document.querySelector('.hud').classList.remove('hidden-controls');
 }
 
 // 짱센검 구매
@@ -604,15 +794,15 @@ function buySuperSword() {
     
     const status = document.getElementById('purchaseStatus');
     
-    if (gameState.score < 100) {
-        status.textContent = '❌ 점수가 부족합니다! (필요: 100점)';
+    if (gameState.score < 200) {
+        status.textContent = '❌ 점수가 부족합니다! (필요: 200점)';
         status.className = 'purchase-status error';
         status.classList.remove('hidden');
         return;
     }
     
     // 구매 처리
-    gameState.score -= 100;
+    gameState.score -= 200;
     gameState.hasSuperSword = true;
     player.attackPower = 10;
     
@@ -634,18 +824,84 @@ function buySuperSword() {
     status.classList.remove('hidden');
 }
 
+// 전설의 검 구매
+function buyLegendarySword() {
+    if (gameState.hasLegendarySword) {
+        return;
+    }
+    
+    const status = document.getElementById('purchaseStatusLegendary');
+    
+    if (gameState.score < 2000) {
+        status.textContent = '❌ 점수가 부족합니다! (필요: 2000점)';
+        status.className = 'purchase-status error';
+        status.classList.remove('hidden');
+        return;
+    }
+    
+    // 구매 처리
+    gameState.score -= 2000;
+    gameState.hasLegendarySword = true;
+    gameState.hasSuperSword = false; // 전설의 검으로 업그레이드
+    player.attackPower = 100;
+    
+    // 이미지 변경
+    player.image.src = './images/sol_2.png';
+    player.imageLeft.src = './images/sol_2_left.png';
+    player.imageRight.src = './images/sol_2_right.png';
+    
+    updateScore();
+    document.getElementById('shopScore').textContent = gameState.score;
+    document.getElementById('shopScore2').textContent = gameState.score;
+    
+    // 구매 완료 표시
+    const buyBtn = document.getElementById('buyLegendarySwordBtn');
+    buyBtn.disabled = true;
+    buyBtn.textContent = '구매 완료';
+    
+    // 짱센검 상태도 업데이트
+    const superSwordBtn = document.getElementById('buySwordBtn');
+    const superSwordStatus = document.getElementById('purchaseStatus');
+    superSwordBtn.disabled = true;
+    superSwordBtn.textContent = '전설의 검 보유중';
+    superSwordStatus.textContent = '⚡ 전설의 검을 보유하고 있습니다!';
+    superSwordStatus.className = 'purchase-status success';
+    superSwordStatus.classList.remove('hidden');
+    
+    status.textContent = '✅ 전설의 검 구매 완료! 공격력 100배 증가!';
+    status.className = 'purchase-status success';
+    status.classList.remove('hidden');
+}
+
 // 키보드 입력
 document.addEventListener('keydown', (e) => {
-    if (!gameState.isPlaying || gameState.isPaused) return;
+    if (!gameState.isPlaying) return;
     
-    if (e.key === 'ArrowUp' || e.key === ' ') {
+    const key = e.key.toLowerCase();
+    const code = e.code;
+    
+    // 기본 동작 방지
+    if (key === 'arrowup' || key === 'q' || key === 'r' || key === 'b' || 
+        code === 'ArrowUp' || code === 'KeyQ' || code === 'KeyR' || code === 'KeyB') {
         e.preventDefault();
     }
     
-    if (e.key === 'ArrowUp') {
+    if (gameState.isPaused) {
+        // 일시정지 중에는 상점만 닫을 수 있음
+        if (key === 'b' || code === 'KeyB') {
+            closeShop();
+        }
+        return;
+    }
+    
+    if (key === 'arrowup' || code === 'ArrowUp') {
         player.jump();
-    } else if (e.key === ' ') {
-        player.slash();
+    } else if (key === 'q' || code === 'KeyQ') {
+        if (!gameState.isUsingSpecial) player.slash();
+    } else if (key === 'r' || code === 'KeyR') {
+        player.special();
+    } else if (key === 'b' || code === 'KeyB') {
+        openShop();
     }
 });
 
@@ -656,11 +912,15 @@ document.getElementById('jumpBtn').addEventListener('click', () => {
     if (!gameState.isPaused) player.jump();
 });
 document.getElementById('slashBtn').addEventListener('click', () => {
-    if (!gameState.isPaused) player.slash();
+    if (!gameState.isPaused && !gameState.isUsingSpecial) player.slash();
+});
+document.getElementById('specialBtn').addEventListener('click', () => {
+    if (!gameState.isPaused) player.special();
 });
 document.getElementById('shopBtn').addEventListener('click', openShop);
 document.getElementById('closeShopBtn').addEventListener('click', closeShop);
 document.getElementById('buySwordBtn').addEventListener('click', buySuperSword);
+document.getElementById('buyLegendarySwordBtn').addEventListener('click', buyLegendarySword);
 
 // 모바일 터치 이벤트
 document.getElementById('jumpBtn').addEventListener('touchstart', (e) => {
@@ -670,7 +930,12 @@ document.getElementById('jumpBtn').addEventListener('touchstart', (e) => {
 
 document.getElementById('slashBtn').addEventListener('touchstart', (e) => {
     e.preventDefault();
-    if (!gameState.isPaused) player.slash();
+    if (!gameState.isPaused && !gameState.isUsingSpecial) player.slash();
+});
+
+document.getElementById('specialBtn').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (!gameState.isPaused) player.special();
 });
 
 document.getElementById('shopBtn').addEventListener('touchstart', (e) => {

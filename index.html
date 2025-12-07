@@ -69,7 +69,17 @@
 
         <!-- 모바일 컨트롤 버튼 -->
         <div class="mobile-controls">
-            <button id="jumpBtn" class="control-btn left">점프 ↑</button>
+            <div class="left-controls">
+                <button id="specialBtn" class="control-btn special">
+                    <div class="special-content">
+                        <div class="special-text">일격 💥</div>
+                        <div class="special-gauge-container">
+                            <div id="specialGauge" class="special-gauge" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </button>
+                <button id="jumpBtn" class="control-btn left">점프 ↑</button>
+            </div>
             <div class="right-controls">
                 <button id="shopBtn" class="control-btn shop">상점 🛒</button>
                 <button id="slashBtn" class="control-btn right">베기 ⚔️</button>
@@ -85,10 +95,19 @@
                 <div class="shop-item">
                     <h2>⚔️ 짱센검</h2>
                     <p class="item-description">공격력 10배! 건물을 한 방에!</p>
-                    <p class="item-price">가격: 100점</p>
+                    <p class="item-price">가격: 200점</p>
                     <p class="current-score">보유 점수: <span id="shopScore">0</span>점</p>
                     <button id="buySwordBtn" class="btn-primary">구매하기</button>
                     <p id="purchaseStatus" class="purchase-status hidden"></p>
+                </div>
+                
+                <div class="shop-item">
+                    <h2>⚡ 전설의 검</h2>
+                    <p class="item-description">공격력 100배! 전설이 되어라!</p>
+                    <p class="item-price">가격: 2000점</p>
+                    <p class="current-score">보유 점수: <span id="shopScore2">0</span>점</p>
+                    <button id="buyLegendarySwordBtn" class="btn-primary btn-legendary">구매하기</button>
+                    <p id="purchaseStatusLegendary" class="purchase-status hidden"></p>
                 </div>
             </div>
             <button id="closeShopBtn" class="btn-primary">상점 나가기</button>
