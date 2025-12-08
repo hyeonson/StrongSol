@@ -11,7 +11,27 @@ const gameState = {
     hasLegendarySword: false, // 전설의 검 구매 여부
     specialGauge: 0, // 필살기 게이지 (0-20)
     isUsingSpecial: false, // 필살기 사용 중
-    particles: [] // 파티클 효과
+    particles: [], // 파티클 효과
+    difficulty: 'easy' // 난이도: easy, normal, hard
+};
+
+// 난이도별 설정
+const DIFFICULTY_SETTINGS = {
+    easy: {
+        hpIncrease: 2, // 건물마다 체력 +2
+        specialGaugeMax: 20, // 게이지 20회
+        name: 'Easy'
+    },
+    normal: {
+        hpIncrease: 4, // 건물마다 체력 +4
+        specialGaugeMax: 30, // 게이지 30회
+        name: 'Normal'
+    },
+    hard: {
+        hpIncrease: 6, // 건물마다 체력 +6
+        specialGaugeMax: 40, // 게이지 40회
+        name: 'Hard'
+    }
 };
 
 // 캔버스 설정
@@ -77,6 +97,54 @@ function playSlashSound() {
     }
 }
 
+function playExplosionSound() {
+    try {
+        // 폭발 소리 생성 (저주파 붐 소리)
+        const now = audioContext.currentTime;
+        
+        // 오실레이터로 낮은 주파수 생성
+        const oscillator = audioContext.createOscillator();
+        oscillator.type = 'sawtooth';
+        oscillator.frequency.setValueAtTime(80, now);
+        oscillator.frequency.exponentialRampToValueAtTime(20, now + 0.3);
+        
+        // 화이트 노이즈 추가
+        const bufferSize = audioContext.sampleRate * 0.3;
+        const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+        const output = buffer.getChannelData(0);
+        
+        for (let i = 0; i < bufferSize; i++) {
+            output[i] = (Math.random() * 2 - 1) * Math.exp(-i / bufferSize * 5);
+        }
+        
+        const noise = audioContext.createBufferSource();
+        noise.buffer = buffer;
+        
+        // 게인 노드 (볼륨 조절 및 페이드)
+        const gainNode = audioContext.createGain();
+        gainNode.gain.setValueAtTime(0.5, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        
+        const noiseGain = audioContext.createGain();
+        noiseGain.gain.setValueAtTime(0.3, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        
+        // 연결
+        oscillator.connect(gainNode);
+        noise.connect(noiseGain);
+        gainNode.connect(audioContext.destination);
+        noiseGain.connect(audioContext.destination);
+        
+        // 재생
+        oscillator.start(now);
+        oscillator.stop(now + 0.3);
+        noise.start(now);
+        noise.stop(now + 0.3);
+    } catch (error) {
+        console.log('폭발 효과음 재생 실패:', error);
+    }
+}
+
 // 충돌 감지 헬퍼 함수
 function checkCollision(player, building) {
     if (!building || building.destroyed) return false;
@@ -92,27 +160,46 @@ class Particle {
     constructor(x, y, color) {
         this.x = x;
         this.y = y;
-        this.size = Math.random() * 8 + 4;
-        this.velocityX = (Math.random() - 0.5) * 10;
-        this.velocityY = (Math.random() - 0.5) * 10 - 5;
+        this.size = Math.random() * 15 + 8; // 더 크게 (8~23픽셀)
+        this.velocityX = (Math.random() - 0.5) * 25; // 더 빠르게
+        this.velocityY = (Math.random() - 0.5) * 20 - 10; // 더 높이
         this.color = color;
-        this.life = 100; // 생명력
+        this.life = 120; // 더 오래 지속
         this.alpha = 1;
+        this.rotation = Math.random() * Math.PI * 2; // 회전
+        this.rotationSpeed = (Math.random() - 0.5) * 0.3;
+        // 반짝임 효과
+        this.sparkle = Math.random() > 0.7;
     }
     
     update() {
-        this.velocityY += 0.3; // 중력
+        this.velocityY += 0.4; // 중력
         this.x += this.velocityX;
         this.y += this.velocityY;
+        this.rotation += this.rotationSpeed;
         this.life--;
-        this.alpha = this.life / 100;
+        this.alpha = this.life / 120;
+        
+        // 마찰력 (공기 저항)
+        this.velocityX *= 0.98;
     }
     
     draw() {
         ctx.save();
         ctx.globalAlpha = this.alpha;
+        ctx.translate(this.x + gameState.cameraY, this.y + gameState.cameraY);
+        ctx.rotate(this.rotation);
+        
+        // 기본 파티클
         ctx.fillStyle = this.color;
-        ctx.fillRect(this.x + gameState.cameraY, this.y + gameState.cameraY, this.size, this.size);
+        ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+        
+        // 반짝임 효과
+        if (this.sparkle && this.life > 60) {
+            ctx.fillStyle = 'rgba(255, 255, 255, ' + (this.alpha * 0.8) + ')';
+            ctx.fillRect(-this.size / 4, -this.size / 4, this.size / 2, this.size / 2);
+        }
+        
         ctx.restore();
     }
     
@@ -122,11 +209,20 @@ class Particle {
 }
 
 // 파티클 생성 함수
-function createParticles(x, y, width, height, color, count = 20) {
+function createParticles(x, y, width, height, color, count = 50) {
     for (let i = 0; i < count; i++) {
         const px = x + Math.random() * width;
         const py = y + Math.random() * height;
         gameState.particles.push(new Particle(px, py, color));
+    }
+    
+    // 추가 밝은 파티클 (화려함 증가)
+    const brightColors = ['#FFD700', '#FFA500', '#FFFFFF'];
+    for (let i = 0; i < count / 3; i++) {
+        const px = x + Math.random() * width;
+        const py = y + Math.random() * height;
+        const brightColor = brightColors[Math.floor(Math.random() * brightColors.length)];
+        gameState.particles.push(new Particle(px, py, brightColor));
     }
 }
 
@@ -210,7 +306,8 @@ const player = {
                     updateScore();
                     
                     // 베기 성공 시 필살기 게이지 증가
-                    if (gameState.specialGauge < 20) {
+                    const maxGauge = DIFFICULTY_SETTINGS[gameState.difficulty].specialGaugeMax;
+                    if (gameState.specialGauge < maxGauge) {
                         gameState.specialGauge++;
                         updateSpecialGauge();
                     }
@@ -221,7 +318,8 @@ const player = {
     
     special() {
         // 필살기: 화면 위까지 날아가서 건물 파괴
-        if (gameState.specialGauge >= 20 && !gameState.isUsingSpecial && gameState.isPlaying) {
+        const maxGauge = DIFFICULTY_SETTINGS[gameState.difficulty].specialGaugeMax;
+        if (gameState.specialGauge >= maxGauge && !gameState.isUsingSpecial && gameState.isPlaying) {
             gameState.isUsingSpecial = true;
             gameState.specialGauge = 0;
             updateSpecialGauge();
@@ -285,7 +383,8 @@ const player = {
                             // 1초 후 새 건물 생성
                             setTimeout(() => {
                                 if (gameState.isPlaying) {
-                                    const nextHpPerFloor = FLOOR_HP + (gameState.buildingNumber - 1) * 2;
+                                    const hpIncrease = DIFFICULTY_SETTINGS[gameState.difficulty].hpIncrease;
+                                    const nextHpPerFloor = FLOOR_HP + (gameState.buildingNumber - 1) * hpIncrease;
                                     const newBuilding = new Building(nextHpPerFloor);
                                     newBuilding.y = -gameState.cameraY - newBuilding.height;
                                     gameState.currentBuilding = newBuilding;
@@ -500,7 +599,10 @@ class Building {
                     } else {
                         color = this.colorTheme.colors[2];
                     }
-                    createParticles(this.x, floorTopY, this.width, this.floorHeight, color, 15);
+                    // 더 많은 파티클 생성
+                    createParticles(this.x, floorTopY, this.width, this.floorHeight, color, 60);
+                    // 폭발 효과음 재생
+                    playExplosionSound();
                 }
                 
                 destroyedHp += this.floors[i].hp;
@@ -535,7 +637,9 @@ class Building {
                     const floorY = this.y + (this.totalFloors - 1) * this.floorHeight;
                     // 파괴된 층의 색상 사용
                     const color = this.colorTheme.colors[0]; // 진한 색상
-                    createParticles(this.x, floorY, this.width, this.floorHeight, color, 15);
+                    createParticles(this.x, floorY, this.width, this.floorHeight, color, 50);
+                    // 폭발 효과음 재생
+                    playExplosionSound();
                     
                     this.floors.pop();
                     this.totalFloors--;
@@ -550,7 +654,8 @@ class Building {
                         // 1초 후 다음 건물 생성
                         setTimeout(() => {
                             if (gameState.isPlaying) {
-                                const nextHpPerFloor = FLOOR_HP + (gameState.buildingNumber - 1) * 2;
+                                const hpIncrease = DIFFICULTY_SETTINGS[gameState.difficulty].hpIncrease;
+                                const nextHpPerFloor = FLOOR_HP + (gameState.buildingNumber - 1) * hpIncrease;
                                 const newBuilding = new Building(nextHpPerFloor);
                                 // 화면에 보이는 가장 위에서 시작
                                 newBuilding.y = -gameState.cameraY - newBuilding.height;
@@ -589,7 +694,8 @@ class Building {
             
             setTimeout(() => {
                 if (gameState.isPlaying) {
-                    const nextHpPerFloor = FLOOR_HP + (gameState.buildingNumber - 1) * 2;
+                    const hpIncrease = DIFFICULTY_SETTINGS[gameState.difficulty].hpIncrease;
+                    const nextHpPerFloor = FLOOR_HP + (gameState.buildingNumber - 1) * hpIncrease;
                     const newBuilding = new Building(nextHpPerFloor);
                     // 화면에 보이는 가장 위에서 시작
                     newBuilding.y = -gameState.cameraY - newBuilding.height;
@@ -752,12 +858,13 @@ function updateBuildingNumber() {
 function updateSpecialGauge() {
     const gauge = document.getElementById('specialGauge');
     const btn = document.getElementById('specialBtn');
-    const percentage = (gameState.specialGauge / 20) * 100;
+    const maxGauge = DIFFICULTY_SETTINGS[gameState.difficulty].specialGaugeMax;
+    const percentage = (gameState.specialGauge / maxGauge) * 100;
     
     gauge.style.width = percentage + '%';
     
     // 게이지가 가득 차면 버튼 활성화
-    if (gameState.specialGauge >= 20) {
+    if (gameState.specialGauge >= maxGauge) {
         btn.disabled = false;
         btn.style.background = 'rgba(156, 39, 176, 0.9)';
     } else {
@@ -1027,6 +1134,18 @@ document.addEventListener('keydown', (e) => {
     } else if (key === 'b' || code === 'KeyB') {
         openShop();
     }
+});
+
+// 난이도 선택
+document.querySelectorAll('.difficulty-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        // 모든 버튼의 active 클래스 제거
+        document.querySelectorAll('.difficulty-btn').forEach(b => b.classList.remove('active'));
+        // 클릭한 버튼에 active 클래스 추가
+        btn.classList.add('active');
+        // 난이도 설정
+        gameState.difficulty = btn.dataset.difficulty;
+    });
 });
 
 // 버튼 이벤트
