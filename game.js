@@ -20,16 +20,19 @@ const DIFFICULTY_SETTINGS = {
     easy: {
         hpIncrease: 2, // 건물마다 체력 +2
         specialGaugeMax: 20, // 게이지 20회
+        fallSpeed: 2.5, // 건물 낙하 속도
         name: 'Easy'
     },
     normal: {
         hpIncrease: 4, // 건물마다 체력 +4
         specialGaugeMax: 30, // 게이지 30회
+        fallSpeed: 3.5, // 건물 낙하 속도
         name: 'Normal'
     },
     hard: {
         hpIncrease: 6, // 건물마다 체력 +6
         specialGaugeMax: 40, // 게이지 40회
+        fallSpeed: 5, // 건물 낙하 속도
         name: 'Hard'
     }
 };
@@ -542,7 +545,8 @@ class Building {
         this.x = canvas.width / 2 - this.width / 2;
         // startY가 제공되면 그 위치에서 시작, 아니면 화면 위에서 시작
         this.y = startY !== null ? startY : -this.height;
-        this.velocityY = BUILDING_FALL_SPEED;
+        // 난이도별 낙하 속도 적용
+        this.velocityY = DIFFICULTY_SETTINGS[gameState.difficulty].fallSpeed;
         this.pushVelocity = 0; // 밀리는 속도
         this.hpPerFloor = hpPerFloor;
         this.destroyed = false;
@@ -631,12 +635,20 @@ class Building {
                 this.floors[i].hp -= damageToFloor;
                 remainingDamage -= damageToFloor;
                 
+                // 데미지를 입을 때마다 작은 파티클 효과
+                const floorY = this.y + i * this.floorHeight;
+                const floor = this.floors[i];
+                const hpRatio = floor.hp / floor.maxHp;
+                let color = hpRatio > 0.66 ? this.colorTheme.colors[0] : 
+                           hpRatio > 0.33 ? this.colorTheme.colors[1] : 
+                           this.colorTheme.colors[2];
+                
+                // 작은 파티클 생성 (데미지 표시)
+                createParticles(this.x, floorY, this.width, this.floorHeight, color, 8);
+                
                 // 해당 층이 파괴되면 층 제거
                 if (this.floors[i].hp <= 0) {
-                    // 파티클 효과 생성 (건물 색상 테마 사용)
-                    const floorY = this.y + (this.totalFloors - 1) * this.floorHeight;
-                    // 파괴된 층의 색상 사용
-                    const color = this.colorTheme.colors[0]; // 진한 색상
+                    // 큰 파티클 효과 생성 (층 파괴)
                     createParticles(this.x, floorY, this.width, this.floorHeight, color, 50);
                     // 폭발 효과음 재생
                     playExplosionSound();
@@ -912,31 +924,36 @@ function gameOver() {
     document.getElementById('finalScore').textContent = gameState.score;
     
     // 최고 점수 저장 및 표시
-    saveHighScore(gameState.score);
-    displayHighScores();
+    saveHighScore(gameState.score, gameState.difficulty);
+    displayHighScores(gameState.difficulty);
     
     // UI 전환
     document.getElementById('gameScreen').classList.add('hidden');
     document.getElementById('gameOverScreen').classList.remove('hidden');
 }
 
-// 최고 점수 저장
-function saveHighScore(score) {
-    let highScores = JSON.parse(localStorage.getItem('buildingGameHighScores')) || [];
+// 최고 점수 저장 (난이도별)
+function saveHighScore(score, difficulty) {
+    const storageKey = 'buildingGameHighScores_' + difficulty;
+    let highScores = JSON.parse(localStorage.getItem(storageKey)) || [];
     highScores.push(score);
     highScores.sort((a, b) => b - a);
     highScores = highScores.slice(0, 5); // 상위 5개만
-    localStorage.setItem('buildingGameHighScores', JSON.stringify(highScores));
+    localStorage.setItem(storageKey, JSON.stringify(highScores));
 }
 
-// 최고 점수 표시
-function displayHighScores() {
-    const highScores = JSON.parse(localStorage.getItem('buildingGameHighScores')) || [];
+// 최고 점수 표시 (난이도별)
+function displayHighScores(difficulty) {
+    const storageKey = 'buildingGameHighScores_' + difficulty;
+    const highScores = JSON.parse(localStorage.getItem(storageKey)) || [];
     const list = document.getElementById('highscoreList');
-    list.innerHTML = '';
+    
+    // 난이도 이름 표시
+    const difficultyName = DIFFICULTY_SETTINGS[difficulty].name;
+    list.innerHTML = `<h4 style="color: #667eea; margin-bottom: 10px;">🏆 ${difficultyName} 모드</h4>`;
     
     if (highScores.length === 0) {
-        list.innerHTML = '<li>아직 기록이 없습니다</li>';
+        list.innerHTML += '<li>아직 기록이 없습니다</li>';
     } else {
         highScores.forEach((score, index) => {
             const li = document.createElement('li');
