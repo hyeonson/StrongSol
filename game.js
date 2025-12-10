@@ -535,6 +535,102 @@ const player = {
     }
 };
 
+// Dify API 호출 함수
+async function fetchBuildingName() {
+    try {
+        // 매번 새로운 conversation_id 생성 (랜덤 응답을 위해)
+        const conversationId = '';
+        // 매번 다른 user ID 생성 (랜덤 응답을 위해)
+        const userId = 'game-user-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        
+        const response = await fetch('https://api.dify.ai/v1/chat-messages', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer app-JJC0AcAtTqZJ6FaKGh1H8Mpd',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                inputs: {},
+                query: '용어 랜덤 추천',
+                response_mode: 'blocking',
+                conversation_id: conversationId,
+                user: userId
+            })
+        });
+        
+        // 응답 상태 확인
+        if (!response.ok) {
+            console.error('Dify API 응답 오류:', response.status, response.statusText);
+            return null;
+        }
+        
+        const data = await response.json();
+        console.log('Dify API 응답 데이터:', data);
+        
+        // 응답에서 name 필드 추출 (다양한 경로 확인)
+        if (data && data.name) {
+            console.log('name 필드 발견:', data.name);
+            return data.name;
+        }
+        
+        // answer 필드 확인 (일부 Dify 응답 구조)
+        if (data && data.answer) {
+            console.log('answer 필드 발견:', data.answer);
+            
+            // answer가 객체인 경우 name 필드 확인
+            if (typeof data.answer === 'object' && data.answer.name) {
+                return data.answer.name;
+            }
+            
+            // answer가 문자열인 경우 JSON 파싱 시도
+            if (typeof data.answer === 'string') {
+                let answerText = data.answer.trim();
+                
+                // 마크다운 코드 블록 제거 (```json ... ```)
+                if (answerText.startsWith('```json')) {
+                    answerText = answerText.replace(/^```json\s*/i, '').replace(/\s*```$/g, '').trim();
+                } else if (answerText.startsWith('```')) {
+                    answerText = answerText.replace(/^```\s*/i, '').replace(/\s*```$/g, '').trim();
+                }
+                
+                // JSON 파싱 시도
+                try {
+                    const jsonData = JSON.parse(answerText);
+                    if (jsonData && jsonData.name) {
+                        console.log('JSON 파싱 성공, name 필드:', jsonData.name);
+                        return jsonData.name;
+                    }
+                } catch (parseError) {
+                    console.warn('JSON 파싱 실패:', parseError);
+                    // 파싱 실패 시 원본 문자열 반환하지 않음 (null 반환)
+                }
+            }
+        }
+        
+        // message 필드 확인
+        if (data && data.message) {
+            console.log('message 필드 발견:', data.message);
+            if (typeof data.message === 'object' && data.message.name) {
+                return data.message.name;
+            }
+            if (typeof data.message === 'string') {
+                return data.message;
+            }
+        }
+        
+        // data 자체가 문자열인 경우
+        if (typeof data === 'string') {
+            return data;
+        }
+        
+        console.warn('name 필드를 찾을 수 없습니다. 응답 구조:', Object.keys(data));
+        return null;
+    } catch (error) {
+        console.error('Dify API 호출 실패:', error);
+        return null;
+    }
+}
+
 // 건물
 class Building {
     constructor(hpPerFloor, startY = null) {
@@ -551,9 +647,21 @@ class Building {
         this.hpPerFloor = hpPerFloor;
         this.destroyed = false;
         
-        // 건물 타입 랜덤 선택
+        // 건물 타입 기본값 (API 호출 전까지 사용)
         const buildingTypes = ['업무', '스트레스', '민원', '숙취'];
         this.buildingType = buildingTypes[Math.floor(Math.random() * buildingTypes.length)];
+        
+        // Dify API에서 건물 이름 가져오기
+        fetchBuildingName().then(name => {
+            if (name && name.trim()) {
+                console.log('건물 이름 업데이트:', name.trim());
+                this.buildingType = name.trim();
+            } else {
+                console.log('API에서 이름을 가져오지 못했습니다. 기본값 사용:', this.buildingType);
+            }
+        }).catch(error => {
+            console.error('건물 이름 가져오기 실패:', error);
+        });
         
         // 색상 테마 랜덤 선택
         const colorThemes = [
