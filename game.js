@@ -538,10 +538,9 @@ const player = {
 // Dify API 호출 함수
 async function fetchBuildingName() {
     try {
-        // 매번 새로운 conversation_id 생성 (랜덤 응답을 위해)
-        const conversationId = '';
-        // 초 단위로 user ID 생성 (랜덤 응답을 위해)
-        const userId = 'game-user-' + Math.floor(Date.now() / 1000);
+        // 매번 완전히 새로운 대화를 위해 conversation_id 제거
+        // user ID를 밀리초 + 랜덤으로 생성하여 매번 고유하게 만듦
+        const userId = 'game-user-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
         
         const response = await fetch('https://api.dify.ai/v1/chat-messages', {
             method: 'POST',
@@ -551,9 +550,8 @@ async function fetchBuildingName() {
             },
             body: JSON.stringify({
                 inputs: {},
-                query: '용어 랜덤 추천',
+                query: '업무 랜덤 추천',
                 response_mode: 'blocking',
-                conversation_id: conversationId,
                 user: userId
             })
         });
